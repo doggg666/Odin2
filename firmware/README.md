@@ -165,3 +165,19 @@ updates playback per audio block. Releasing it saves the setting in the
 `odin_audio` NVS namespace through a worker task; startup restores it before
 creating the UI. The initial level is 50%. Forget network only clears Wi-Fi
 credentials and does not change volume.
+
+## Battery and Setting page
+
+The home header shows a battery icon, reported percentage, and voltage. A cog
+button opens **Setting**, with battery and charging details, saved speaker
+volume, and a shortcut to Wi-Fi settings. The STC8 is read every five seconds
+on the existing touch I2C bus (GPIO45/46), at address 0x2F, using the supplied
+bsp_stc8h1kxx driver's byte-by-byte register protocol. The percentage is an
+estimate from the controller, not a calibrated state-of-charge measurement.
+If the controller is absent, a transaction fails, or data is invalid, the UI
+shows unavailable instead of displaying a previous or fabricated reading.
+
+The native LVGL preview `docs/ui/settings.png` shows the Setting page with
+sample battery values. Startup used 48% of the configured LVGL heap during the
+hardware check. The STC8 acknowledged and returned battery data; the observed
+USB-powered reading was above 4.35 V, so it is flagged as needing inspection.

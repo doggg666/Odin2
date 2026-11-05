@@ -5,3 +5,13 @@
 /* Owns V1.0 LCD power, backlight, DSI, touch I2C, and the LVGL task. */
 esp_err_t odin_board_init(void);
 esp_err_t odin_board_set_backlight(uint32_t brightness);
+
+/* STC8 battery registers. Call from a worker task; uses the existing touch bus. */
+typedef struct {
+    uint32_t adc_mv;
+    uint32_t battery_mv;
+    uint8_t percent;
+    uint8_t charge_state;
+    uint8_t led_state;
+} odin_battery_info_t;
+esp_err_t odin_board_read_battery(odin_battery_info_t *info);

@@ -6,6 +6,7 @@
 #include "odin_wifi_ui.h"
 #include "odin_ai.h"
 #include "odin_audio.h"
+#include "odin_settings.h"
 #include "nvs_flash.h"
 
 static const char *TAG = "odin";
@@ -29,6 +30,7 @@ void app_main(void)
     odin_ui_set_transcript("Ask a question, share a thought,\nor simply start talking.");
     odin_wifi_ui_create();
     odin_ai_create();
+    odin_settings_create();
     lvgl_port_unlock();
     ESP_ERROR_CHECK(odin_board_set_backlight(100));
     ESP_LOGI(TAG, "Odin UI ready; display and touch initialized");

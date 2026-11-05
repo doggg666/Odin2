@@ -1,7 +1,7 @@
 #include "odin_ui.h"
 #include <string.h>
 
-static lv_obj_t *status_label, *transcript_label, *mode_label;
+static lv_obj_t *status_label, *transcript_label, *mode_label, *battery_label;
 
 void odin_ui_button_style(lv_obj_t *obj, int variant)
 {
@@ -73,8 +73,11 @@ void odin_ui_create(void)
     lv_obj_t *scr = lv_scr_act(); odin_ui_panel_style(scr); lv_obj_set_style_pad_all(scr, 0, 0);
     label(scr, "O D I N", 48, 32, &lv_font_montserrat_24, ODIN_TEXT);
     label(scr, "YOUR PERSONAL COMPANION", 48, 70, &lv_font_montserrat_14, ODIN_MUTED);
-    mode_label = label(scr, "Connecting", 744, 36, &lv_font_montserrat_14, ODIN_ACCENT);
-    lv_obj_set_width(mode_label, 230); lv_obj_set_style_text_align(mode_label, LV_TEXT_ALIGN_RIGHT, 0);
+    mode_label = label(scr, "Connecting", 690, 40, &lv_font_montserrat_14, ODIN_ACCENT);
+    lv_obj_set_width(mode_label, 206); lv_obj_set_style_text_align(mode_label, LV_TEXT_ALIGN_RIGHT, 0);
+    battery_label = label(scr, LV_SYMBOL_BATTERY_EMPTY "  Battery --", 454, 40, &lv_font_montserrat_14, ODIN_MUTED);
+    lv_obj_set_width(battery_label, 216);
+    lv_obj_set_style_text_align(battery_label, LV_TEXT_ALIGN_RIGHT, 0);
     label(scr, "A little clarity.\nA conversation away.", 56, 164, &lv_font_montserrat_40, ODIN_TEXT);
     status_label = label(scr, "Ready when you are", 58, 290, &lv_font_montserrat_18, ODIN_ACCENT);
     transcript_label = label(scr, "Ask a question, share a thought,\nor simply start talking.", 58, 326, &lv_font_montserrat_16, ODIN_MUTED);
@@ -115,4 +118,25 @@ void odin_ui_set_mode(const char *mode)
 {
     if (!mode_label || !mode) return;
     lv_label_set_text(mode_label, !strcmp(mode, "LM STUDIO") ? LV_SYMBOL_OK "  AI connected" : "AI offline");
+}
+
+void odin_ui_set_battery(bool available, uint32_t millivolts, unsigned percent, bool charging)
+{
+    if (!battery_label) return;
+    if (!available) {
+        lv_label_set_text(battery_label, LV_SYMBOL_BATTERY_EMPTY "  Battery --");
+        lv_obj_set_style_text_color(battery_label, lv_color_hex(ODIN_MUTED), 0);
+        return;
+    }
+    if (millivolts > 4350) {
+        lv_label_set_text(battery_label, LV_SYMBOL_BATTERY_EMPTY "  Check battery");
+        lv_obj_set_style_text_color(battery_label, lv_color_hex(0xF1B5A5), 0);
+        return;
+    }
+    const char *icon = charging ? LV_SYMBOL_CHARGE : percent > 80 ? LV_SYMBOL_BATTERY_FULL :
+                       percent > 55 ? LV_SYMBOL_BATTERY_3 : percent > 30 ? LV_SYMBOL_BATTERY_2 :
+                       percent > 10 ? LV_SYMBOL_BATTERY_1 : LV_SYMBOL_BATTERY_EMPTY;
+    lv_label_set_text_fmt(battery_label, "%s  %u%%  %lu.%02lu V", icon, percent,
+                          (unsigned long)(millivolts / 1000), (unsigned long)((millivolts % 1000) / 10));
+    lv_obj_set_style_text_color(battery_label, lv_color_hex(percent <= 15 && !charging ? 0xF1B5A5 : ODIN_ACCENT), 0);
 }

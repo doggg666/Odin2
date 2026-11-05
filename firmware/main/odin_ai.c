@@ -261,6 +261,12 @@ static void volume_changed(lv_event_t *e)
 }
 static void ai_poll(lv_timer_t *t)
 {
+    unsigned volume = odin_audio_get_volume();
+    if (lv_slider_get_value(volume_slider) != volume) {
+        lv_slider_set_value(volume_slider, volume, LV_ANIM_OFF);
+        if (volume) lv_label_set_text_fmt(volume_label, "Volume  %u%%", volume);
+        else lv_label_set_text(volume_label, "Volume  Muted");
+    }
     static result_t result;
     while (xQueueReceive(results, &result, 0)) {
         if (result.background && busy) continue;

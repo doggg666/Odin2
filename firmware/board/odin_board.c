@@ -196,3 +196,43 @@ esp_err_t odin_board_init(void)
     ESP_RETURN_ON_ERROR(panel_init(), TAG, "display panel");
     return display_lvgl_init();
 }
+
+/* Matches the supplied bsp_stc8h1kxx driver: 0x2F, byte-wise register reads.
+ * Decode explicitly instead of relying on compiler structure padding. */
+static i2c_master_dev_handle_t battery_device;
+static uint32_t battery_u32_le(const uint8_t *p)
+{
+    return (uint32_t)p[0] | ((uint32_t)p[1] << 8) |
+           ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
+}
+esp_err_t odin_board_read_battery(odin_battery_info_t *info)
+{
+    if (!info) return ESP_ERR_INVALID_ARG;
+    if (!i2c_bus) return ESP_ERR_INVALID_STATE;
+    if (!battery_device) {
+        esp_err_t err = i2c_master_probe(i2c_bus, 0x2F, 100);
+        if (err != ESP_OK) return err;
+        const i2c_device_config_t cfg = {
+            .dev_addr_length = I2C_ADDR_BIT_LEN_7,
+            .device_address = 0x2F,
+            .scl_speed_hz = 400000,
+        };
+        err = i2c_master_bus_add_device(i2c_bus, &cfg, &battery_device);
+        if (err != ESP_OK) return err;
+    }
+    uint8_t raw[12] = {0};
+    for (uint8_t reg = 0; reg < sizeof(raw); ++reg) {
+        esp_err_t err = i2c_master_transmit_receive(battery_device, &reg, 1, raw + reg, 1, 100);
+        if (err != ESP_OK) return err;
+    }
+    odin_battery_info_t sample = {
+        .adc_mv = battery_u32_le(raw),
+        .battery_mv = battery_u32_le(raw + 4),
+        .percent = raw[8], .charge_state = raw[9], .led_state = raw[10],
+    };
+    if (sample.adc_mv > 3600 || sample.battery_mv < 2000 || sample.battery_mv > 5000 ||
+        sample.percent > 100 || sample.charge_state > 4 || sample.led_state > 4)
+        return ESP_ERR_INVALID_RESPONSE;
+    *info = sample;
+    return ESP_OK;
+}

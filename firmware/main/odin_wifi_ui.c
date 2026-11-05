@@ -173,7 +173,8 @@ static void close_cb(lv_event_t *e)
     hide_keyboard();
     lv_obj_add_flag(dialog, LV_OBJ_FLAG_HIDDEN);
 }
-static void open_cb(lv_event_t *e) { lv_obj_clear_flag(dialog, LV_OBJ_FLAG_HIDDEN); }
+void odin_wifi_ui_open(void) { lv_obj_clear_flag(dialog, LV_OBJ_FLAG_HIDDEN); lv_obj_move_foreground(dialog); }
+static void open_cb(lv_event_t *e) { odin_wifi_ui_open(); }
 static void focus_cb(lv_event_t *e)
 {
     show_keyboard(lv_event_get_target(e));

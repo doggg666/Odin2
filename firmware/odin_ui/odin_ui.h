@@ -15,6 +15,7 @@ void odin_ui_create(void);
 void odin_ui_set_status(const char *status);
 void odin_ui_set_transcript(const char *text);
 void odin_ui_set_mode(const char *mode);
+void odin_ui_set_battery(bool available, uint32_t millivolts, unsigned percent, bool charging);
 /* Shared appearance: 0 secondary, 1 primary, 2 destructive. */
 void odin_ui_button_style(lv_obj_t *obj, int variant);
 void odin_ui_panel_style(lv_obj_t *obj);
