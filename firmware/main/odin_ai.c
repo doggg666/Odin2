@@ -264,7 +264,7 @@ void odin_ai_create(void)
 {
     requests = xQueueCreate(1, sizeof(request_t)); results = xQueueCreate(2, sizeof(result_t));
     if (!requests || !results) return;
-    lv_obj_t *home_chat = button(lv_scr_act(), LV_SYMBOL_AUDIO "  Talk to Odin", 56, 364, 250, open_cb);
+    lv_obj_t *home_chat = button(lv_scr_act(), "Talk to Odin", 56, 364, 250, open_cb);
     lv_obj_set_height(home_chat, 60); odin_ui_button_style(home_chat, 1);
     dialog = lv_obj_create(lv_scr_act()); lv_obj_set_size(dialog, 1024, 600); lv_obj_center(dialog);
     odin_ui_panel_style(dialog);
@@ -286,7 +286,7 @@ void odin_ai_create(void)
     lv_obj_add_event_cb(prompt, focus_cb, LV_EVENT_FOCUSED, NULL);
     send_button = button(dialog, "Send " LV_SYMBOL_RIGHT, 776, 278, 176, send_cb);
     lv_obj_set_height(send_button, 58); odin_ui_button_style(send_button, 1);
-    talk_button = button(dialog, LV_SYMBOL_AUDIO "  Hold to talk", 8, 360, 240, NULL);
+    talk_button = button(dialog, "Hold to talk", 8, 360, 240, NULL);
     lv_obj_set_height(talk_button, 60); odin_ui_button_style(talk_button, 1);
     audio_test_button = button(dialog, "Hold to test mic", 264, 360, 212, NULL);
     lv_obj_set_height(audio_test_button, 60);
