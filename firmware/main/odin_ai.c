@@ -2,6 +2,7 @@
 #include "odin_ui.h"
 #include "odin_wifi.h"
 #include "odin_audio.h"
+#include "odin_settings.h"
 #include "odin_voice.h"
 #include <stdatomic.h>
 #include "lvgl.h"
@@ -23,7 +24,6 @@ static const char *TAG = "odin_ai";
 static QueueHandle_t requests, results;
 static lv_obj_t *dialog, *prompt, *reply, *status, *send_button, *keyboard;
 static bool busy;
-static lv_obj_t *volume_slider, *volume_label;
 static atomic_bool recording;
 static lv_obj_t *talk_button, *audio_test_button, *speak_checkbox;
 typedef struct { char text[PROMPT_LIMIT]; bool voice, test, speak; } request_t;
@@ -202,8 +202,8 @@ static void worker(void *arg)
 static void hide_keyboard(void) { lv_keyboard_set_textarea(keyboard, NULL); lv_obj_add_flag(keyboard, LV_OBJ_FLAG_HIDDEN); }
 static void focus_cb(lv_event_t *e) { lv_keyboard_set_textarea(keyboard, prompt); lv_obj_clear_flag(keyboard, LV_OBJ_FLAG_HIDDEN); }
 static void keyboard_cb(lv_event_t *e) { hide_keyboard(); }
-static void open_cb(lv_event_t *e) { lv_obj_clear_flag(dialog, LV_OBJ_FLAG_HIDDEN); }
-static void close_cb(lv_event_t *e) { atomic_store(&recording, false); hide_keyboard(); lv_obj_add_flag(dialog, LV_OBJ_FLAG_HIDDEN); }
+static void open_cb(lv_event_t *e) { odin_settings_set_home(false); lv_obj_clear_flag(dialog, LV_OBJ_FLAG_HIDDEN); lv_obj_move_foreground(dialog); }
+static void close_cb(lv_event_t *e) { atomic_store(&recording, false); hide_keyboard(); lv_obj_add_flag(dialog, LV_OBJ_FLAG_HIDDEN); odin_settings_set_home(true); }
 static void send_cb(lv_event_t *e)
 {
     if (busy) return;
@@ -250,23 +250,8 @@ static lv_obj_t *button(lv_obj_t *parent, const char *text, int x, int y, int wi
     if (cb) lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *label = lv_label_create(b); lv_label_set_text(label, text); lv_obj_center(label); return b;
 }
-static void volume_changed(lv_event_t *e)
-{
-    unsigned volume = lv_slider_get_value(volume_slider);
-    odin_audio_set_volume(volume);
-    if (volume) lv_label_set_text_fmt(volume_label, "Volume  %u%%", volume);
-    else lv_label_set_text(volume_label, "Volume  Muted");
-    if (lv_event_get_code(e) == LV_EVENT_RELEASED ||
-        lv_event_get_code(e) == LV_EVENT_PRESS_LOST) odin_audio_save_volume();
-}
 static void ai_poll(lv_timer_t *t)
 {
-    unsigned volume = odin_audio_get_volume();
-    if (lv_slider_get_value(volume_slider) != volume) {
-        lv_slider_set_value(volume_slider, volume, LV_ANIM_OFF);
-        if (volume) lv_label_set_text_fmt(volume_label, "Volume  %u%%", volume);
-        else lv_label_set_text(volume_label, "Volume  Muted");
-    }
     static result_t result;
     while (xQueueReceive(results, &result, 0)) {
         if (result.background && busy) continue;
@@ -314,26 +299,10 @@ void odin_ai_create(void)
     lv_obj_add_event_cb(audio_test_button, recording_cb, LV_EVENT_ALL, NULL);
     speak_checkbox = lv_checkbox_create(dialog); lv_obj_set_pos(speak_checkbox, 520, 380);
     lv_checkbox_set_text(speak_checkbox, "Speak replies"); lv_obj_add_state(speak_checkbox, LV_STATE_CHECKED);
-    lv_obj_t *voice_hint = lv_label_create(dialog); lv_obj_set_pos(voice_hint, 8, 492);
+    lv_obj_t *voice_hint = lv_label_create(dialog); lv_obj_set_pos(voice_hint, 8, 452);
     lv_obj_set_style_text_color(voice_hint, lv_color_hex(ODIN_MUTED), 0);
     lv_obj_set_style_text_line_space(voice_hint, 8, 0);
     lv_label_set_text(voice_hint, "Hold to record. Release to send.");
-    volume_label = lv_label_create(dialog); lv_obj_set_pos(volume_label, 8, 452);
-    lv_obj_set_style_text_color(volume_label, lv_color_hex(ODIN_MUTED), 0);
-    unsigned volume = odin_audio_get_volume();
-    if (volume) lv_label_set_text_fmt(volume_label, "Volume  %u%%", volume);
-    else lv_label_set_text(volume_label, "Volume  Muted");
-    volume_slider = lv_slider_create(dialog); lv_obj_set_pos(volume_slider, 208, 458);
-    lv_obj_set_size(volume_slider, 716, 10); lv_slider_set_range(volume_slider, 0, 100);
-    lv_slider_set_value(volume_slider, volume, LV_ANIM_OFF);
-    lv_obj_set_ext_click_area(volume_slider, 18);
-    lv_obj_set_style_bg_color(volume_slider, lv_color_hex(ODIN_LINE), LV_PART_MAIN);
-    lv_obj_set_style_bg_color(volume_slider, lv_color_hex(ODIN_ACCENT), LV_PART_INDICATOR);
-    lv_obj_set_style_bg_color(volume_slider, lv_color_hex(ODIN_ACCENT), LV_PART_KNOB);
-    lv_obj_set_style_pad_all(volume_slider, 8, LV_PART_KNOB);
-    lv_obj_add_event_cb(volume_slider, volume_changed, LV_EVENT_VALUE_CHANGED, NULL);
-    lv_obj_add_event_cb(volume_slider, volume_changed, LV_EVENT_RELEASED, NULL);
-    lv_obj_add_event_cb(volume_slider, volume_changed, LV_EVENT_PRESS_LOST, NULL);
     keyboard = lv_keyboard_create(dialog); lv_obj_set_pos(keyboard, 8, 348); lv_obj_set_size(keyboard, 944, 198);
     odin_ui_keyboard_style(keyboard);
     lv_obj_add_event_cb(keyboard, keyboard_cb, LV_EVENT_READY, NULL);

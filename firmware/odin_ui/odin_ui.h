@@ -10,6 +10,8 @@ extern "C" {
 #define ODIN_TEXT 0xF2F3E9
 #define ODIN_MUTED 0xA5B8AB
 #define ODIN_ACCENT 0xC8E6AE
+/* User-defined power-source rule; applied to valid STC8 readings. */
+#define ODIN_USB_POWER_THRESHOLD_MV 4300
 /* UI calls require the LVGL lock or an LVGL callback. */
 void odin_ui_create(void);
 void odin_ui_set_status(const char *status);

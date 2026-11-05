@@ -13,6 +13,7 @@ typedef struct {
     odin_battery_info_t battery;
 } battery_result_t;
 static QueueHandle_t readings;
+static lv_obj_t *cog;
 static lv_obj_t *page, *battery_value, *battery_details, *battery_note;
 static lv_obj_t *volume_slider, *volume_value;
 
@@ -42,9 +43,20 @@ static void battery_worker(void *arg)
         vTaskDelay(pdMS_TO_TICKS(5000));
     }
 }
-static void home_cb(lv_event_t *e) { lv_obj_add_flag(page, LV_OBJ_FLAG_HIDDEN); }
+void odin_settings_set_home(bool home)
+{
+    if (!cog) return;
+    if (home) lv_obj_clear_flag(cog, LV_OBJ_FLAG_HIDDEN);
+    else lv_obj_add_flag(cog, LV_OBJ_FLAG_HIDDEN);
+}
+static void home_cb(lv_event_t *e)
+{
+    lv_obj_add_flag(page, LV_OBJ_FLAG_HIDDEN);
+    odin_settings_set_home(true);
+}
 static void open_cb(lv_event_t *e)
 {
+    odin_settings_set_home(false);
     lv_obj_clear_flag(page, LV_OBJ_FLAG_HIDDEN);
     lv_obj_move_foreground(page);
 }
@@ -72,10 +84,10 @@ static void poll(lv_timer_t *timer)
         if (available) {
             lv_label_set_text_fmt(battery_value, "%lu.%02lu V", (unsigned long)(result.battery.battery_mv / 1000),
                                   (unsigned long)((result.battery.battery_mv % 1000) / 10));
-            if (result.battery.battery_mv > 4350) {
-                lv_label_set_text(battery_details, "Reading needs checking");
-                lv_label_set_text(battery_note, "Reported voltage is high for one cell. Check whether a battery is connected.");
-                lv_obj_set_style_text_color(battery_value, lv_color_hex(0xF1B5A5), 0);
+            if (result.battery.battery_mv > ODIN_USB_POWER_THRESHOLD_MV) {
+                lv_label_set_text(battery_details, "USB power connected");
+                lv_label_set_text(battery_note, "USB power is shown when reported voltage is above 4.3 V.");
+                lv_obj_set_style_text_color(battery_value, lv_color_hex(ODIN_ACCENT), 0);
             } else {
                 lv_label_set_text_fmt(battery_details, "%u%% remaining\n%s", result.battery.percent,
                                       charge_name(result.battery.charge_state));
@@ -119,7 +131,7 @@ void odin_settings_create(void)
 {
     readings = xQueueCreate(1, sizeof(battery_result_t));
     if (!readings) return;
-    lv_obj_t *cog = button(lv_scr_act(), LV_SYMBOL_SETTINGS, 924, 24, 52, open_cb);
+    cog = button(lv_scr_act(), LV_SYMBOL_SETTINGS, 924, 24, 52, open_cb);
     lv_obj_set_style_radius(cog, LV_RADIUS_CIRCLE, 0);
     lv_obj_set_style_text_font(cog, &lv_font_montserrat_24, 0);
     page = lv_obj_create(lv_scr_act()); lv_obj_set_size(page, 1024, 600); lv_obj_center(page);

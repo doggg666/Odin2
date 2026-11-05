@@ -1,6 +1,7 @@
 #include "odin_wifi_ui.h"
 #include "odin_wifi.h"
 #include "odin_ui.h"
+#include "odin_settings.h"
 #include "lvgl.h"
 #include "esp_netif.h"
 #include "nvs_flash.h"
@@ -172,8 +173,9 @@ static void close_cb(lv_event_t *e)
     lv_textarea_set_text(password_input, "");
     hide_keyboard();
     lv_obj_add_flag(dialog, LV_OBJ_FLAG_HIDDEN);
+    odin_settings_set_home(true);
 }
-void odin_wifi_ui_open(void) { lv_obj_clear_flag(dialog, LV_OBJ_FLAG_HIDDEN); lv_obj_move_foreground(dialog); }
+void odin_wifi_ui_open(void) { odin_settings_set_home(false); lv_obj_clear_flag(dialog, LV_OBJ_FLAG_HIDDEN); lv_obj_move_foreground(dialog); }
 static void open_cb(lv_event_t *e) { odin_wifi_ui_open(); }
 static void focus_cb(lv_event_t *e)
 {

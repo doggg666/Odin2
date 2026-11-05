@@ -29,7 +29,7 @@ never written by the battery monitor.
 
 First hardware check: the V1.0 board acknowledged 0x2F and returned ADC
 3283 mV, battery 4563 mV, 100%, charge state 2. This establishes protocol
-communication, not correct cell voltage or pack presence. Readings above
-4350 mV are flagged as needing inspection; the home header shows Check battery
-and Setting displays the controller's reported voltage without presenting its
-percentage as reliable. A connected-cell measurement remains to be checked.
+communication, not correct cell voltage or pack presence. The application applies the user-requested power-source rule: readings above
+4300 mV show USB power on Home and USB power connected in Setting. At exactly
+4300 mV or below it shows the battery reading and charge state. This rule is a
+voltage-based heuristic; the protocol does not independently identify USB presence.

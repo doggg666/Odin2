@@ -128,9 +128,9 @@ void odin_ui_set_battery(bool available, uint32_t millivolts, unsigned percent, 
         lv_obj_set_style_text_color(battery_label, lv_color_hex(ODIN_MUTED), 0);
         return;
     }
-    if (millivolts > 4350) {
-        lv_label_set_text(battery_label, LV_SYMBOL_BATTERY_EMPTY "  Check battery");
-        lv_obj_set_style_text_color(battery_label, lv_color_hex(0xF1B5A5), 0);
+    if (millivolts > ODIN_USB_POWER_THRESHOLD_MV) {
+        lv_label_set_text(battery_label, LV_SYMBOL_USB "  USB power");
+        lv_obj_set_style_text_color(battery_label, lv_color_hex(ODIN_ACCENT), 0);
         return;
     }
     const char *icon = charging ? LV_SYMBOL_CHARGE : percent > 80 ? LV_SYMBOL_BATTERY_FULL :

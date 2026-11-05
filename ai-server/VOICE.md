@@ -53,7 +53,7 @@ release to transcribe, ask LM Studio, and play its reply. **Speak replies** also
 enables TTS for typed prompts. Uncheck it for text-only responses.
 **Hold: mic test** records while held and plays the recording back locally,
 without Wi-Fi or server access. Hold for at least a quarter second.
-The amplifier stays muted outside playback, and playback defaults to 50% volume. The panel volume slider applies immediately;
+The amplifier stays muted outside playback, and playback defaults to 50% volume. The volume slider in Setting applies immediately;
 0% mutes and releasing the slider saves its level across reboots.
 All recording, network work, and playback run outside the LVGL UI task.
 

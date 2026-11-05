@@ -159,7 +159,7 @@ are enabled in both the active configuration and defaults.
 with sample connected-state text; they are not photographs of the panel.
 Pre-refresh source files are in `backups/before-ui-refresh/`.
 
-Speaker volume is adjustable from 0–100% in Talk to Odin, with 0% muting the
+Speaker volume is adjustable from 0–100% only in Setting, with 0% muting the
 amplifier. Both TTS replies and the mic test use the same gain. The slider
 updates playback per audio block. Releasing it saves the setting in the
 `odin_audio` NVS namespace through a worker task; startup restores it before
@@ -179,5 +179,8 @@ shows unavailable instead of displaying a previous or fabricated reading.
 
 The native LVGL preview `docs/ui/settings.png` shows the Setting page with
 sample battery values. Startup used 48% of the configured LVGL heap during the
-hardware check. The STC8 acknowledged and returned battery data; the observed
-USB-powered reading was above 4.35 V, so it is flagged as needing inspection.
+hardware check. The STC8 acknowledged and returned battery data. Per the requested power-source
+rule, valid readings above 4.3 V display USB power; readings at or below 4.3 V
+display battery voltage, percentage, and charging state. This is a UI heuristic,
+not an independent USB-presence measurement. The cog is hidden on every page
+except Home, and speaker volume is controlled only from Setting.
