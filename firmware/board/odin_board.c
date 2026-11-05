@@ -30,6 +30,19 @@ static esp_lcd_panel_handle_t panel;
 static i2c_master_bus_handle_t i2c_bus;
 static esp_lcd_touch_handle_t touch;
 static bool backlight_ready;
+static uint32_t backlight_percent;
+static bool (*touch_filter)(bool pressed);
+static void (*original_touch_read)(lv_indev_drv_t *, lv_indev_data_t *);
+
+void odin_board_set_touch_filter(bool (*filter)(bool pressed)) { touch_filter = filter; }
+uint32_t odin_board_get_backlight(void) { return backlight_percent; }
+static void read_filtered_touch(lv_indev_drv_t *driver, lv_indev_data_t *data)
+{
+    original_touch_read(driver, data);
+    if (touch_filter && touch_filter(data->state == LV_INDEV_STATE_PRESSED))
+        data->state = LV_INDEV_STATE_RELEASED;
+}
+
 static bool init_started;
 
 esp_err_t odin_board_set_backlight(uint32_t brightness)
@@ -39,7 +52,9 @@ esp_err_t odin_board_set_backlight(uint32_t brightness)
     uint32_t duty = brightness ? brightness * 18 + 200 : 0;
     ESP_RETURN_ON_ERROR(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, duty),
                         TAG, "set backlight duty");
-    return ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
+    esp_err_t err = ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
+    if (err == ESP_OK) backlight_percent = brightness;
+    return err;
 }
 
 static esp_err_t backlight_init(void)
@@ -177,8 +192,16 @@ static esp_err_t display_lvgl_init(void)
     lv_display_t *display = lvgl_port_add_disp_dsi(&display_cfg, &dsi_cfg);
     ESP_RETURN_ON_FALSE(display, ESP_FAIL, TAG, "register LVGL display");
     const lvgl_port_touch_cfg_t touch_cfg = {.disp = display, .handle = touch};
-    ESP_RETURN_ON_FALSE(lvgl_port_add_touch(&touch_cfg), ESP_FAIL, TAG,
-                        "register LVGL touch");
+    ESP_RETURN_ON_FALSE(lvgl_port_lock(1000), ESP_ERR_TIMEOUT, TAG, "lock LVGL for touch registration");
+    lv_indev_t *touch_input = lvgl_port_add_touch(&touch_cfg);
+    if (!touch_input) {
+        lvgl_port_unlock();
+        ESP_LOGE(TAG, "register LVGL touch");
+        return ESP_FAIL;
+    }
+    original_touch_read = touch_input->driver->read_cb;
+    touch_input->driver->read_cb = read_filtered_touch;
+    lvgl_port_unlock();
     return ESP_OK;
 }
 

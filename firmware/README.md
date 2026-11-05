@@ -220,3 +220,11 @@ The timezone is `EST5EDT,M3.2.0/2,M11.1.0/2`, implementing Montreal's seasonal
 Eastern time rules. Tests covered winter/summer offsets, both 2026 DST
 transitions, and the pre-sync and short-buffer cases. Reference:
 https://www.quebec.ca/gouvernement/portrait-quebec/changement-heure
+
+## Screen power saver
+
+Enable **Setting → Power saver** to turn off the backlight after ten minutes
+without touch. Touch the screen to wake it at its previous brightness; the first
+gesture only wakes the screen. Clock updates and network activity do not reset
+the timeout. The switch defaults to off and is saved in NVS across restarts.
+Wi-Fi, voice services, and the processor continue running while the screen sleeps.

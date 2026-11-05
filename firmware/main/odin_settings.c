@@ -4,6 +4,7 @@
 #include "odin_wifi_ui.h"
 #include "odin_board.h"
 #include "odin_models.h"
+#include "odin_power.h"
 #include <string.h>
 #include <stdio.h>
 #include "esp_log.h"
@@ -18,7 +19,7 @@ typedef struct {
 static QueueHandle_t readings;
 static lv_obj_t *cog;
 static lv_obj_t *page, *battery_value, *battery_details, *battery_note;
-static lv_obj_t *volume_slider, *volume_value;
+static lv_obj_t *volume_slider, *volume_value, *power_switch;
 static lv_obj_t *model_selector, *model_status, *model_refresh;
 static odin_models_snapshot_t models;
 static uint32_t model_revision;
@@ -80,6 +81,10 @@ static void volume_cb(lv_event_t *e)
     else lv_label_set_text(volume_value, "Muted");
     if (lv_event_get_code(e) == LV_EVENT_RELEASED || lv_event_get_code(e) == LV_EVENT_PRESS_LOST)
         odin_audio_save_volume();
+}
+static void power_changed_cb(lv_event_t *event)
+{
+    odin_power_set_enabled(lv_obj_has_state(power_switch, LV_STATE_CHECKED));
 }
 static void model_refresh_cb(lv_event_t *e)
 {
@@ -180,7 +185,15 @@ void odin_settings_create(void)
     page = lv_obj_create(lv_scr_act()); lv_obj_set_size(page, 1024, 600); lv_obj_center(page);
     odin_ui_panel_style(page);
     text(page, "Setting", 8, 8, &lv_font_montserrat_24, ODIN_TEXT);
-    text(page, "A few things, just the way you like them.", 8, 68, &lv_font_montserrat_16, ODIN_MUTED);
+    text(page, "Power saver", 8, 72, &lv_font_montserrat_16, ODIN_TEXT);
+    text(page, "Screen off after 10 min. Touch to wake.", 148, 72, &lv_font_montserrat_14, ODIN_MUTED);
+    power_switch = lv_switch_create(page); lv_obj_set_pos(power_switch, 866, 64); lv_obj_set_size(power_switch, 64, 28);
+    lv_obj_set_ext_click_area(power_switch, 8);
+    lv_obj_set_style_bg_color(power_switch, lv_color_hex(ODIN_RAISED), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(power_switch, lv_color_hex(ODIN_ACCENT), LV_PART_INDICATOR | LV_STATE_CHECKED);
+    lv_obj_set_style_bg_color(power_switch, lv_color_hex(ODIN_TEXT), LV_PART_KNOB);
+    if (odin_power_is_enabled()) lv_obj_add_state(power_switch, LV_STATE_CHECKED);
+    lv_obj_add_event_cb(power_switch, power_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
     button(page, LV_SYMBOL_LEFT "  Home", 844, 0, 108, home_cb);
     lv_obj_t *battery_card = card(page, 104, 132);
     text(battery_card, LV_SYMBOL_BATTERY_FULL "  Battery", 24, 14, &lv_font_montserrat_18, ODIN_TEXT);
