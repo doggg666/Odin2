@@ -1,0 +1,30 @@
+dependencies:
+  idf: ">=5.4.2,<6.0"
+  espressif/esp_lcd_ek79007:
+    version: "1.0.4"
+    override_path: "../third_party/espressif__esp_lcd_ek79007"
+  espressif/esp_lcd_touch_gt911:
+    version: "1.2.0~2"
+    override_path: "../third_party/espressif__esp_lcd_touch_gt911"
+  espressif/esp_lcd_touch:
+    version: "1.2.1"
+    override_path: "../third_party/espressif__esp_lcd_touch"
+  espressif/esp_lvgl_port:
+    version: "2.8.0~1"
+    override_path: "../third_party/espressif__esp_lvgl_port"
+  lvgl/lvgl:
+    version: "8.4.0"
+    override_path: "../third_party/lvgl__lvgl"
+  espressif/cmake_utilities:
+    version: "0.5.3"
+    override_path: "../third_party/espressif__cmake_utilities"
+  espressif/esp_hosted:
+    override_path: "../third_party/espressif__esp_hosted"
+  espressif/esp_wifi_remote:
+    override_path: "../third_party/espressif__esp_wifi_remote"
+  espressif/wifi_remote_over_eppp:
+    override_path: "../third_party/espressif__wifi_remote_over_eppp"
+  espressif/eppp_link:
+    override_path: "../third_party/espressif__eppp_link"
+  espressif/esp_serial_slave_link:
+    override_path: "../third_party/espressif__esp_serial_slave_link"

@@ -1,0 +1,9 @@
+build/
+sdkconfig
+sdkconfig.old
+dependencies.lock
+managed_components/
+backups/
+
+components/odin_wifi/wifi_defaults.local.h
+

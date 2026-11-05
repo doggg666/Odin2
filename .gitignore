@@ -1,0 +1,16 @@
+# Private configuration
+.env
+.env.*
+!.env.example
+**/wifi_defaults.local.h
+# Generated files
+**/build/
+**/backups/
+**/__pycache__/
+**/.cache/
+**/.voice-venv/
+**/.venv/
+**/sdkconfig.old
+*.pyc
+# Download voice weights using the documented setup command.
+*.onnx

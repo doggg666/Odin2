@@ -1,0 +1,5 @@
+idf_component_register(
+    SRCS "main.c" "odin_wifi_ui.c" "odin_ai.c" "odin_audio.c" "odin_voice.c" "../odin_ui/odin_ui.c"
+    INCLUDE_DIRS "." "../odin_ui"
+    PRIV_REQUIRES board esp_hw_support odin_wifi nvs_flash esp_http_client json esp_driver_i2s esp_driver_gpio
+)

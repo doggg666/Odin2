@@ -1,0 +1,4 @@
+
+.voice-venv/
+__pycache__/
+voices/*.onnx
