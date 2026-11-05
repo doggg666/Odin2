@@ -8,6 +8,7 @@
 #include "odin_audio.h"
 #include "odin_settings.h"
 #include "odin_models.h"
+#include "odin_clock.h"
 #include "nvs_flash.h"
 
 static const char *TAG = "odin";
@@ -19,6 +20,7 @@ void app_main(void)
     ESP_LOGI(TAG, "Odin CrowPanel V1.0 starting; chip %s, revision %d",
              CONFIG_IDF_TARGET, chip_info.revision);
     ESP_ERROR_CHECK(nvs_flash_init());
+    ESP_ERROR_CHECK(odin_clock_init());
     ESP_ERROR_CHECK(odin_audio_settings_init());
     ESP_ERROR_CHECK(odin_models_init());
     ESP_ERROR_CHECK(odin_board_init());

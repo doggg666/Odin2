@@ -1,8 +1,10 @@
 #include "odin_ui.h"
 #include "odin_face.h"
+#include "odin_time.h"
 #include <string.h>
+#include <stdio.h>
 
-static lv_obj_t *status_label, *transcript_label, *mode_label, *battery_label;
+static lv_obj_t *status_label, *transcript_label, *mode_label, *battery_label, *clock_label;
 
 void odin_ui_button_style(lv_obj_t *obj, int variant)
 {
@@ -66,6 +68,13 @@ static lv_obj_t *label(lv_obj_t *parent, const char *text, int x, int y, const l
     lv_obj_set_pos(obj, x, y); lv_obj_set_style_text_font(obj, font, 0);
     lv_obj_set_style_text_color(obj, lv_color_hex(color), 0); return obj;
 }
+static void update_clock(lv_timer_t *timer)
+{
+    char text[96];
+    if (!odin_time_format(time(NULL), text, sizeof(text)))
+        snprintf(text, sizeof(text), "Montreal, QC  |  Waiting for time sync...");
+    if (strcmp(lv_label_get_text(clock_label), text)) lv_label_set_text(clock_label, text);
+}
 void odin_ui_create(void)
 {
     lv_theme_t *theme = lv_theme_default_init(lv_disp_get_default(), lv_color_hex(ODIN_ACCENT),
@@ -90,7 +99,11 @@ void odin_ui_create(void)
     label(scr, "A SPACE TO THINK OUT LOUD", 611, 464, &lv_font_montserrat_14, ODIN_MUTED);
     lv_obj_t *line = lv_obj_create(scr); lv_obj_set_pos(line, 48, 532); lv_obj_set_size(line, 928, 1);
     lv_obj_set_style_bg_color(line, lv_color_hex(ODIN_LINE), 0); lv_obj_set_style_border_width(line, 0, 0);
-    label(scr, "Made for your everyday questions", 48, 554, &lv_font_montserrat_14, ODIN_MUTED);
+    clock_label = label(scr, "Montreal, QC  |  Waiting for time sync...", 48, 554, &lv_font_montserrat_14, ODIN_MUTED);
+    lv_obj_set_width(clock_label, 578);
+    lv_label_set_long_mode(clock_label, LV_LABEL_LONG_CLIP);
+    update_clock(NULL);
+    lv_timer_create(update_clock, 1000, NULL);
 }
 void odin_ui_set_status(const char *status)
 {

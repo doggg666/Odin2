@@ -205,3 +205,18 @@ in `odin_ui/assets/`; the display asset is embedded in flash with a native LVGL
 image descriptor. It requires no runtime download, image decoder, or extra
 full-image heap allocation. Asset conversion instructions are in that folder.
 The 1024x600 Home preview in `docs/ui/home.png` reflects the new artwork.
+
+## Montreal date and time
+
+Home's lower-left footer shows Montreal, Quebec's date and time in 24-hour
+format, including seconds and EST/EDT. It updates once per second. The former
+footer sentence is removed. A worker starts ESP-IDF SNTP after Wi-Fi connects,
+using `time.nrc.ca` with `pool.ntp.org` as a second server. The UI shows Waiting
+for time sync before a valid clock is available, and the clock keeps ticking
+through temporary Wi-Fi outages after synchronization. Cold boots need network
+time again. The servers are queried periodically by SNTP (one-hour interval).
+
+The timezone is `EST5EDT,M3.2.0/2,M11.1.0/2`, implementing Montreal's seasonal
+Eastern time rules. Tests covered winter/summer offsets, both 2026 DST
+transitions, and the pre-sync and short-buffer cases. Reference:
+https://www.quebec.ca/gouvernement/portrait-quebec/changement-heure
