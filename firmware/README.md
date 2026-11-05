@@ -198,3 +198,10 @@ A model change applies to the next chat request, not an answer already generatin
 The model list supports up to 16 unique IDs of at most 191 UTF-8 bytes; malformed
 IDs and embedding IDs are excluded. The Settings selector was checked against
 the live server (four chat models) and native LVGL UI selection tests.
+
+Home uses the user-supplied Odin face artwork in place of the former waveform
+and rings. The original image and its 340x340 RGB565 display asset are retained
+in `odin_ui/assets/`; the display asset is embedded in flash with a native LVGL
+image descriptor. It requires no runtime download, image decoder, or extra
+full-image heap allocation. Asset conversion instructions are in that folder.
+The 1024x600 Home preview in `docs/ui/home.png` reflects the new artwork.

@@ -1,4 +1,5 @@
 #include "odin_ui.h"
+#include "odin_face.h"
 #include <string.h>
 
 static lv_obj_t *status_label, *transcript_label, *mode_label, *battery_label;
@@ -82,24 +83,10 @@ void odin_ui_create(void)
     transcript_label = label(scr, "Ask a question, share a thought,\nor simply start talking.", 58, 278, &lv_font_montserrat_16, ODIN_MUTED);
     lv_obj_set_width(transcript_label, 490); lv_label_set_long_mode(transcript_label, LV_LABEL_LONG_WRAP);
     lv_obj_set_style_text_line_space(transcript_label, 7, 0);
-    /* Static concentric rings avoid continuous framebuffer redraws. */
-    for (int i = 0; i < 3; ++i) {
-        lv_obj_t *ring = lv_obj_create(scr); int size = 286 - i * 54;
-        lv_obj_set_size(ring, size, size); lv_obj_set_pos(ring, 745 - size / 2, 286 - size / 2);
-        lv_obj_set_style_radius(ring, LV_RADIUS_CIRCLE, 0);
-        lv_obj_set_style_bg_color(ring, lv_color_hex(i == 2 ? 0x233D2D : ODIN_BG), 0);
-        lv_obj_set_style_border_color(ring, lv_color_hex(i == 0 ? 0x24392D : 0x496745), 0);
-        lv_obj_set_style_border_width(ring, 1, 0);
-        lv_obj_set_style_pad_all(ring, 0, 0); lv_obj_clear_flag(ring, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
-    }
-    const int heights[] = {16, 32, 50, 66, 40, 24, 48, 30, 14};
-    for (int i = 0; i < 9; ++i) {
-        lv_obj_t *bar = lv_obj_create(scr); lv_obj_set_size(bar, 5, heights[i]);
-        lv_obj_set_pos(bar, 695 + i * 12, 286 - heights[i] / 2);
-        lv_obj_set_style_bg_color(bar, lv_color_hex(ODIN_ACCENT), 0);
-        lv_obj_set_style_border_width(bar, 0, 0); lv_obj_set_style_radius(bar, 4, 0);
-        lv_obj_clear_flag(bar, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
-    }
+    lv_obj_t *face = lv_img_create(scr);
+    lv_img_set_src(face, &odin_face_image);
+    lv_obj_set_pos(face, 745 - ODIN_FACE_WIDTH / 2, 116);
+    lv_obj_clear_flag(face, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
     label(scr, "A SPACE TO THINK OUT LOUD", 611, 464, &lv_font_montserrat_14, ODIN_MUTED);
     lv_obj_t *line = lv_obj_create(scr); lv_obj_set_pos(line, 48, 532); lv_obj_set_size(line, 928, 1);
     lv_obj_set_style_bg_color(line, lv_color_hex(ODIN_LINE), 0); lv_obj_set_style_border_width(line, 0, 0);
