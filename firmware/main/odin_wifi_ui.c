@@ -176,7 +176,6 @@ static void close_cb(lv_event_t *e)
     odin_settings_set_home(true);
 }
 void odin_wifi_ui_open(void) { odin_settings_set_home(false); lv_obj_clear_flag(dialog, LV_OBJ_FLAG_HIDDEN); lv_obj_move_foreground(dialog); }
-static void open_cb(lv_event_t *e) { odin_wifi_ui_open(); }
 static void focus_cb(lv_event_t *e)
 {
     show_keyboard(lv_event_get_target(e));
@@ -253,8 +252,6 @@ void odin_wifi_ui_create(void)
     results = xQueueCreate(3, sizeof(result_t));
     if (!requests || !results) return;
     lv_obj_t *scr = lv_scr_act();
-    button(scr, LV_SYMBOL_WIFI "  Wi-Fi settings", 322, 420, 200, open_cb);
-    lv_obj_set_height(lv_obj_get_child(scr, -1), 60);
     home_status = lv_label_create(scr); lv_label_set_text(home_status, "Wi-Fi: starting...");
     lv_obj_set_pos(home_status, 650, 554); lv_obj_set_width(home_status, 326);
     lv_obj_set_style_text_font(home_status, &lv_font_montserrat_14, 0);

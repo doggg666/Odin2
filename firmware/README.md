@@ -66,7 +66,7 @@ a 5.5 compiler. Use a fresh build directory whenever changing IDF versions.
 
 ## Wi-Fi settings
 
-Tap **Wi-Fi settings**, select a 2.4 GHz network (or type a hidden SSID), enter
+Open **Setting → Wi-Fi settings**, select a 2.4 GHz network (or type a hidden SSID), enter
 its password with the floating keyboard, and tap **Connect**. Tap either field
 to open the keyboard; drag its title bar to move it, or tap **Hide** to dismiss.
 Done advances from SSID to password, then dismisses the keyboard. Passwords
@@ -114,8 +114,12 @@ not yet been validated. No C6 firmware was modified.
 The base URL in `main/odin_ai.c` is `http://192.168.1.93:1234/v1`.
 Tap **Talk to Odin**, enter a message, dismiss the keyboard with Done, and tap
 **Send**. Replies appear in a scrollable text area. Network work runs on a
-separate task. Model discovery uses `/models`, selecting the first non-embedding
-model; generation uses `/chat/completions` with non-streaming output, a 512-token
+separate task. Model discovery uses `/models`. Select a chat model in **Setting → AI model**;
+embedding models are excluded. The selected ID is saved to NVS, restored on
+startup, and used by typed and voice requests. The first available chat model
+is selected only when no saved choice exists. If a saved model is missing,
+choose another explicitly. **Refresh** reloads the list without blocking touch.
+Generation uses `/chat/completions` with non-streaming output, a 512-token
 limit, a 90-second HTTP timeout, and a bounded 32 KB response buffer. Messages
 are independent requests; multi-turn conversation history is not implemented.
 The endpoint has no configured authorization header; the supplied LAN server
@@ -184,3 +188,13 @@ rule, valid readings above 4.3 V display USB power; readings at or below 4.3 V
 display battery voltage, percentage, and charging state. This is a UI heuristic,
 not an independent USB-presence measurement. The cog is hidden on every page
 except Home, and speaker volume is controlled only from Setting.
+
+
+The Home Wi-Fi action and former two-line headline have been removed. Wi-Fi
+configuration is available from Setting, beside volume and the AI model selector.
+Model listing and selection persistence run in a worker separate from chat,
+so refreshing Setting does not block touch or an in-progress conversation.
+A model change applies to the next chat request, not an answer already generating.
+The model list supports up to 16 unique IDs of at most 191 UTF-8 bytes; malformed
+IDs and embedding IDs are excluded. The Settings selector was checked against
+the live server (four chat models) and native LVGL UI selection tests.

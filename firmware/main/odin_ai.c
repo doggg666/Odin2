@@ -3,6 +3,7 @@
 #include "odin_wifi.h"
 #include "odin_audio.h"
 #include "odin_settings.h"
+#include "odin_models.h"
 #include "odin_voice.h"
 #include <stdatomic.h>
 #include "lvgl.h"
@@ -76,22 +77,13 @@ static cJSON *http_json(const char *suffix, const char *payload, char *error, si
     return json;
 }
 
+cJSON *odin_ai_fetch_models(char *error, size_t error_size)
+{
+    return http_json("/models", NULL, error, error_size);
+}
 static bool discover_model(char *model, size_t size, char *error, size_t error_size)
 {
-    cJSON *json = http_json("/models", NULL, error, error_size);
-    if (!json) return false;
-    cJSON *item;
-    bool found = false;
-    cJSON_ArrayForEach(item, cJSON_GetObjectItemCaseSensitive(json, "data")) {
-        cJSON *id = cJSON_GetObjectItemCaseSensitive(item, "id");
-        if (cJSON_IsString(id) && id->valuestring[0] && !strstr(id->valuestring, "embedding")) {
-            if (strlen(id->valuestring) >= size) continue;
-            snprintf(model, size, "%s", id->valuestring); found = true; break;
-        }
-    }
-    cJSON_Delete(json);
-    if (!found) snprintf(error, error_size, "No chat model found. Load a chat model in LM Studio.");
-    return found;
+    return odin_models_resolve(model, size, error, error_size);
 }
 
 static void worker(void *arg)
@@ -103,9 +95,10 @@ static void worker(void *arg)
     esp_err_t audio_err = odin_audio_init();
     if (audio_err != ESP_OK) ESP_LOGW(TAG, "Audio init failed: %s", esp_err_to_name(audio_err));
     bool probed = false;
+    TickType_t next_probe = 0;
     for (;;) {
         if (!xQueueReceive(requests, req, pdMS_TO_TICKS(500))) {
-            if (!probed && odin_wifi_is_connected()) {
+            if (!probed && odin_wifi_is_connected() && (int32_t)(xTaskGetTickCount() - next_probe) >= 0) {
                 memset(out, 0, sizeof(*out));
                 out->background = true;
                 out->online = discover_model(model, sizeof(model), out->text, sizeof(out->text));
@@ -114,7 +107,8 @@ static void worker(void *arg)
                     ESP_LOGI(TAG, "LM Studio model discovery succeeded");
                 }
                 xQueueSend(results, out, portMAX_DELAY);
-                probed = true;
+                probed = out->online;
+                next_probe = xTaskGetTickCount() + pdMS_TO_TICKS(5000);
             }
             continue;
         }
@@ -158,6 +152,7 @@ static void worker(void *arg)
             cJSON *root = cJSON_CreateObject();
             if (root) {
                 cJSON_AddStringToObject(root, "model", model);
+                ESP_LOGI(TAG, "Sending chat request using model: %s", model);
                 cJSON_AddBoolToObject(root, "stream", false);
                 cJSON_AddNumberToObject(root, "max_tokens", 512);
                 cJSON *messages = cJSON_AddArrayToObject(root, "messages");
@@ -269,7 +264,7 @@ void odin_ai_create(void)
 {
     requests = xQueueCreate(1, sizeof(request_t)); results = xQueueCreate(2, sizeof(result_t));
     if (!requests || !results) return;
-    lv_obj_t *home_chat = button(lv_scr_act(), LV_SYMBOL_AUDIO "  Talk to Odin", 56, 420, 250, open_cb);
+    lv_obj_t *home_chat = button(lv_scr_act(), LV_SYMBOL_AUDIO "  Talk to Odin", 56, 364, 250, open_cb);
     lv_obj_set_height(home_chat, 60); odin_ui_button_style(home_chat, 1);
     dialog = lv_obj_create(lv_scr_act()); lv_obj_set_size(dialog, 1024, 600); lv_obj_center(dialog);
     odin_ui_panel_style(dialog);

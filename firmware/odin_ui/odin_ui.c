@@ -78,9 +78,8 @@ void odin_ui_create(void)
     battery_label = label(scr, LV_SYMBOL_BATTERY_EMPTY "  Battery --", 454, 40, &lv_font_montserrat_14, ODIN_MUTED);
     lv_obj_set_width(battery_label, 216);
     lv_obj_set_style_text_align(battery_label, LV_TEXT_ALIGN_RIGHT, 0);
-    label(scr, "A little clarity.\nA conversation away.", 56, 164, &lv_font_montserrat_40, ODIN_TEXT);
-    status_label = label(scr, "Ready when you are", 58, 290, &lv_font_montserrat_18, ODIN_ACCENT);
-    transcript_label = label(scr, "Ask a question, share a thought,\nor simply start talking.", 58, 326, &lv_font_montserrat_16, ODIN_MUTED);
+    status_label = label(scr, "Ready when you are", 58, 230, &lv_font_montserrat_24, ODIN_ACCENT);
+    transcript_label = label(scr, "Ask a question, share a thought,\nor simply start talking.", 58, 278, &lv_font_montserrat_16, ODIN_MUTED);
     lv_obj_set_width(transcript_label, 490); lv_label_set_long_mode(transcript_label, LV_LABEL_LONG_WRAP);
     lv_obj_set_style_text_line_space(transcript_label, 7, 0);
     /* Static concentric rings avoid continuous framebuffer redraws. */

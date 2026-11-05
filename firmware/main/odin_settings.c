@@ -3,6 +3,9 @@
 #include "odin_audio.h"
 #include "odin_wifi_ui.h"
 #include "odin_board.h"
+#include "odin_models.h"
+#include <string.h>
+#include <stdio.h>
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -16,6 +19,9 @@ static QueueHandle_t readings;
 static lv_obj_t *cog;
 static lv_obj_t *page, *battery_value, *battery_details, *battery_note;
 static lv_obj_t *volume_slider, *volume_value;
+static lv_obj_t *model_selector, *model_status, *model_refresh;
+static odin_models_snapshot_t models;
+static uint32_t model_revision;
 
 static const char *charge_name(unsigned value)
 {
@@ -59,6 +65,7 @@ static void open_cb(lv_event_t *e)
     odin_settings_set_home(false);
     lv_obj_clear_flag(page, LV_OBJ_FLAG_HIDDEN);
     lv_obj_move_foreground(page);
+    odin_models_refresh();
 }
 static void wifi_cb(lv_event_t *e)
 {
@@ -74,8 +81,44 @@ static void volume_cb(lv_event_t *e)
     if (lv_event_get_code(e) == LV_EVENT_RELEASED || lv_event_get_code(e) == LV_EVENT_PRESS_LOST)
         odin_audio_save_volume();
 }
+static void model_refresh_cb(lv_event_t *e)
+{
+    if (!odin_models_refresh()) lv_label_set_text(model_status, "Model service is busy. Try again shortly.");
+}
+static void model_selected_cb(lv_event_t *e)
+{
+    unsigned index = lv_dropdown_get_selected(model_selector);
+    if (index >= models.catalog.count) return;
+    if (odin_models_select(models.catalog.ids[index]))
+        lv_label_set_text(model_status, "Saving model selection...");
+    else lv_label_set_text(model_status, "Model service is busy. Choose again shortly.");
+}
+static void update_models(void)
+{
+    if (!odin_models_snapshot(&models, &model_revision)) return;
+    static char options[ODIN_MODEL_MAX * ODIN_MODEL_ID_SIZE];
+    size_t used = 0;
+    for (unsigned i = 0; i < models.catalog.count; ++i) {
+        int written = snprintf(options + used, sizeof(options) - used, "%s%s", i ? "\n" : "", models.catalog.ids[i]);
+        if (written < 0 || (size_t)written >= sizeof(options) - used) break;
+        used += written;
+    }
+    options[used] = 0;
+    lv_dropdown_set_options(model_selector, used ? options : "No models available");
+    int selected = odin_model_catalog_find(&models.catalog, models.selected);
+    if (selected >= 0) {
+        lv_dropdown_set_selected(model_selector, selected);
+        lv_dropdown_set_text(model_selector, NULL);
+    } else lv_dropdown_set_text(model_selector, models.selected[0] ? "Saved model unavailable" : "Choose an AI model");
+    if (models.catalog.count && !models.busy) lv_obj_clear_state(model_selector, LV_STATE_DISABLED);
+    else lv_obj_add_state(model_selector, LV_STATE_DISABLED);
+    if (models.busy) lv_obj_add_state(model_refresh, LV_STATE_DISABLED);
+    else lv_obj_clear_state(model_refresh, LV_STATE_DISABLED);
+    lv_label_set_text(model_status, models.status);
+}
 static void poll(lv_timer_t *timer)
 {
+    update_models();
     battery_result_t result;
     if (xQueueReceive(readings, &result, 0)) {
         bool available = result.error == ESP_OK;
@@ -139,19 +182,19 @@ void odin_settings_create(void)
     text(page, "Setting", 8, 8, &lv_font_montserrat_24, ODIN_TEXT);
     text(page, "A few things, just the way you like them.", 8, 68, &lv_font_montserrat_16, ODIN_MUTED);
     button(page, LV_SYMBOL_LEFT "  Home", 844, 0, 108, home_cb);
-    lv_obj_t *battery_card = card(page, 112, 200);
-    text(battery_card, LV_SYMBOL_BATTERY_FULL "  Battery", 24, 24, &lv_font_montserrat_18, ODIN_TEXT);
-    battery_value = text(battery_card, "Checking...", 24, 68, &lv_font_montserrat_40, ODIN_ACCENT);
-    battery_details = text(battery_card, "Waiting for battery status", 500, 74, &lv_font_montserrat_18, ODIN_TEXT);
-    lv_obj_set_style_text_line_space(battery_details, 10, 0);
-    battery_note = text(battery_card, "Readings update automatically.", 24, 156, &lv_font_montserrat_14, ODIN_MUTED);
-    lv_obj_t *audio_card = card(page, 336, 172);
-    text(audio_card, LV_SYMBOL_VOLUME_MAX "  Speaker volume", 24, 24, &lv_font_montserrat_18, ODIN_TEXT);
+    lv_obj_t *battery_card = card(page, 104, 132);
+    text(battery_card, LV_SYMBOL_BATTERY_FULL "  Battery", 24, 14, &lv_font_montserrat_18, ODIN_TEXT);
+    battery_value = text(battery_card, "Checking...", 24, 46, &lv_font_montserrat_40, ODIN_ACCENT);
+    battery_details = text(battery_card, "Waiting for battery status", 440, 44, &lv_font_montserrat_18, ODIN_TEXT);
+    lv_obj_set_style_text_line_space(battery_details, 6, 0);
+    battery_note = text(battery_card, "Readings update automatically.", 24, 108, &lv_font_montserrat_14, ODIN_MUTED);
+    lv_obj_t *audio_card = card(page, 252, 112);
+    text(audio_card, LV_SYMBOL_VOLUME_MAX "  Speaker volume", 24, 14, &lv_font_montserrat_18, ODIN_TEXT);
     unsigned volume = odin_audio_get_volume();
-    volume_value = text(audio_card, "", 548, 24, &lv_font_montserrat_18, ODIN_ACCENT);
+    volume_value = text(audio_card, "", 548, 14, &lv_font_montserrat_18, ODIN_ACCENT);
     if (volume) lv_label_set_text_fmt(volume_value, "%u%%", volume);
     else lv_label_set_text(volume_value, "Muted");
-    volume_slider = lv_slider_create(audio_card); lv_obj_set_pos(volume_slider, 32, 94);
+    volume_slider = lv_slider_create(audio_card); lv_obj_set_pos(volume_slider, 32, 70);
     lv_obj_set_size(volume_slider, 564, 10); lv_slider_set_range(volume_slider, 0, 100);
     lv_slider_set_value(volume_slider, volume, LV_ANIM_OFF); lv_obj_set_ext_click_area(volume_slider, 18);
     lv_obj_set_style_bg_color(volume_slider, lv_color_hex(ODIN_LINE), LV_PART_MAIN);
@@ -160,8 +203,31 @@ void odin_settings_create(void)
     lv_obj_add_event_cb(volume_slider, volume_cb, LV_EVENT_VALUE_CHANGED, NULL);
     lv_obj_add_event_cb(volume_slider, volume_cb, LV_EVENT_RELEASED, NULL);
     lv_obj_add_event_cb(volume_slider, volume_cb, LV_EVENT_PRESS_LOST, NULL);
-    button(audio_card, LV_SYMBOL_WIFI "  Wi-Fi settings", 696, 74, 220, wifi_cb);
-    text(audio_card, "Volume is saved when you release the slider.", 24, 132, &lv_font_montserrat_14, ODIN_MUTED);
+    button(audio_card, LV_SYMBOL_WIFI "  Wi-Fi settings", 696, 44, 220, wifi_cb);
+    lv_obj_t *model_card = card(page, 380, 156);
+    text(model_card, "AI model", 24, 16, &lv_font_montserrat_18, ODIN_TEXT);
+    model_refresh = button(model_card, LV_SYMBOL_REFRESH "  Refresh", 792, 10, 128, model_refresh_cb);
+    lv_obj_set_height(model_refresh, 40);
+    model_selector = lv_dropdown_create(model_card);
+    lv_obj_set_pos(model_selector, 24, 58); lv_obj_set_size(model_selector, 896, 46);
+    lv_obj_set_style_bg_color(model_selector, lv_color_hex(ODIN_RAISED), 0);
+    lv_obj_set_style_text_color(model_selector, lv_color_hex(ODIN_TEXT), 0);
+    lv_obj_set_style_border_color(model_selector, lv_color_hex(ODIN_LINE), 0);
+    lv_obj_set_style_radius(model_selector, 10, 0);
+    lv_dropdown_set_options(model_selector, "Loading models...");
+    lv_obj_add_state(model_selector, LV_STATE_DISABLED);
+    lv_obj_t *list = lv_dropdown_get_list(model_selector);
+    if (list) {
+        lv_obj_set_style_bg_color(list, lv_color_hex(ODIN_RAISED), 0);
+        lv_obj_set_style_text_color(list, lv_color_hex(ODIN_TEXT), 0);
+        lv_obj_set_style_max_height(list, 240, 0);
+        lv_obj_set_style_bg_color(list, lv_color_hex(ODIN_ACCENT), LV_PART_SELECTED | LV_STATE_CHECKED);
+        lv_obj_set_style_text_color(list, lv_color_hex(ODIN_BG), LV_PART_SELECTED | LV_STATE_CHECKED);
+    }
+    lv_obj_add_event_cb(model_selector, model_selected_cb, LV_EVENT_VALUE_CHANGED, NULL);
+    model_status = text(model_card, "Loading models...", 24, 120, &lv_font_montserrat_14, ODIN_MUTED);
+    lv_obj_set_width(model_status, 896); lv_label_set_long_mode(model_status, LV_LABEL_LONG_DOT);
+    update_models();
     lv_obj_add_flag(page, LV_OBJ_FLAG_HIDDEN);
     lv_timer_create(poll, 250, NULL);
     lv_mem_monitor_t memory; lv_mem_monitor(&memory);
