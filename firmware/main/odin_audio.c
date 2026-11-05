@@ -8,10 +8,61 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include <stdlib.h>
+#include "nvs.h"
 
 #define AMP_GPIO 30
 static i2s_chan_handle_t rx, tx;
 static bool ready;
+static atomic_uint volume_percent = 50;
+static TaskHandle_t settings_task;
+
+unsigned odin_audio_get_volume(void) { return atomic_load(&volume_percent); }
+void odin_audio_set_volume(unsigned percent)
+{
+    atomic_store(&volume_percent, percent > 100 ? 100 : percent);
+}
+void odin_audio_save_volume(void)
+{
+    if (settings_task) xTaskNotifyGive(settings_task);
+}
+static void save_settings(void *arg)
+{
+    unsigned saved = odin_audio_get_volume();
+    for (;;) {
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        unsigned value = odin_audio_get_volume();
+        if (value == saved) continue;
+        nvs_handle_t handle;
+        esp_err_t err = nvs_open("odin_audio", NVS_READWRITE, &handle);
+        if (err == ESP_OK) {
+            err = nvs_set_u8(handle, "volume", value);
+            if (err == ESP_OK) err = nvs_commit(handle);
+            nvs_close(handle);
+        }
+        if (err == ESP_OK) {
+            saved = value;
+            ESP_LOGI("odin_audio", "Speaker volume saved: %u%%", value);
+        } else ESP_LOGW("odin_audio", "Unable to save volume: %s", esp_err_to_name(err));
+    }
+}
+esp_err_t odin_audio_settings_init(void)
+{
+    if (settings_task) return ESP_OK;
+    nvs_handle_t handle;
+    esp_err_t err = nvs_open("odin_audio", NVS_READONLY, &handle);
+    if (err == ESP_OK) {
+        uint8_t value;
+        err = nvs_get_u8(handle, "volume", &value);
+        nvs_close(handle);
+        if (err == ESP_OK && value <= 100) odin_audio_set_volume(value);
+        else if (err != ESP_ERR_NVS_NOT_FOUND && err != ESP_OK) return err;
+    } else if (err != ESP_ERR_NVS_NOT_FOUND) return err;
+    if (xTaskCreate(save_settings, "audio_settings", 3072, NULL, 2, &settings_task) != pdPASS)
+        return ESP_ERR_NO_MEM;
+    ESP_LOGI("odin_audio", "Speaker volume loaded: %u%%", odin_audio_get_volume());
+    return ESP_OK;
+}
+
 
 esp_err_t odin_audio_init(void)
 {
@@ -98,14 +149,20 @@ esp_err_t odin_audio_play(const int16_t *pcm, size_t bytes)
     if (err != ESP_OK) return err;
     err = i2s_channel_enable(tx);
     if (err != ESP_OK) return err;
-    gpio_set_level(AMP_GPIO, 0);
+    unsigned previous_volume = odin_audio_get_volume();
+    gpio_set_level(AMP_GPIO, previous_volume == 0);
     int16_t stereo[512];
     for (size_t offset = 0; offset < bytes / 2 && err == ESP_OK;) {
         size_t count = bytes / 2 - offset;
         if (count > 256) count = 256;
+        unsigned volume = odin_audio_get_volume();
+        if (volume != previous_volume) {
+            gpio_set_level(AMP_GPIO, volume == 0);
+            previous_volume = volume;
+        }
         for (size_t i = 0; i < count; i++) {
-            /* Start at half volume. Duplicate mono into both hardware slots. */
-            stereo[i * 2] = stereo[i * 2 + 1] = pcm[offset + i] / 2;
+            /* Bound gain to unity and apply equally to both hardware slots. */
+            stereo[i * 2] = stereo[i * 2 + 1] = (int32_t)pcm[offset + i] * (int32_t)volume / 100;
         }
         size_t sent = 0;
         err = i2s_channel_write(tx, stereo, count * 4, &sent, 1000);

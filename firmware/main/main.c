@@ -5,6 +5,8 @@
 #include "odin_ui.h"
 #include "odin_wifi_ui.h"
 #include "odin_ai.h"
+#include "odin_audio.h"
+#include "nvs_flash.h"
 
 static const char *TAG = "odin";
 
@@ -14,6 +16,8 @@ void app_main(void)
     esp_chip_info(&chip_info);
     ESP_LOGI(TAG, "Odin CrowPanel V1.0 starting; chip %s, revision %d",
              CONFIG_IDF_TARGET, chip_info.revision);
+    ESP_ERROR_CHECK(nvs_flash_init());
+    ESP_ERROR_CHECK(odin_audio_settings_init());
     ESP_ERROR_CHECK(odin_board_init());
     if (!lvgl_port_lock(1000)) {
         ESP_LOGE(TAG, "Timed out acquiring LVGL lock");

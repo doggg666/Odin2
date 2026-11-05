@@ -158,3 +158,10 @@ are enabled in both the active configuration and defaults.
 `docs/ui/home.png` and `docs/ui/chat.png` are 1024x600 native LVGL host previews
 with sample connected-state text; they are not photographs of the panel.
 Pre-refresh source files are in `backups/before-ui-refresh/`.
+
+Speaker volume is adjustable from 0–100% in Talk to Odin, with 0% muting the
+amplifier. Both TTS replies and the mic test use the same gain. The slider
+updates playback per audio block. Releasing it saves the setting in the
+`odin_audio` NVS namespace through a worker task; startup restores it before
+creating the UI. The initial level is 50%. Forget network only clears Wi-Fi
+credentials and does not change volume.
